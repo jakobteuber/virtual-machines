@@ -1,0 +1,48 @@
+---
+Language:        Cpp
+BasedOnStyle:    LLVM
+
+IndentWidth: 2
+
+AlignAfterOpenBracket: BlockIndent
+AlignArrayOfStructures: Left
+AlignOperands: AlignAfterOperator
+
+AllowShortBlocksOnASingleLine: Always
+AllowShortCaseExpressionOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortCompoundRequirementOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: true
+
+BreakAdjacentStringLiterals: true
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Attach
+BreakBeforeConceptDeclarations: true
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: AfterColon
+BreakInheritanceList: AfterColon
+BreakStringLiterals: true
+BreakTemplateDeclarations: Yes
+
+InsertNewlineAtEOF: true
+LineEnding: LF
+
+PackConstructorInitializers: Never
+
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+ReflowComments: true
+
+SortIncludes: CaseInsensitive
+SortUsingDeclarations: LexicographicNumeric
+
+SpaceAfterTemplateKeyword: false
+SpaceBeforeCpp11BracedList: true
+SpaceBeforeRangeBasedForLoopColon: false
+
+UseTab: Never
