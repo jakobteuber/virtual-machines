@@ -12,15 +12,14 @@ namespace jakobteuber::util::error {
 inline void partialReport(std::ostringstream&, unsigned) {}
 
 template<typename Arg, typename... Other>
-void partialReport(
-    std::ostringstream& out, unsigned i, Arg arg, Other... other
-) {
+void partialReport(std::ostringstream& out, unsigned i, Arg arg,
+                   Other... other) {
   out << '(' << i << ") `" << arg << "`\n";
   partialReport(out, i + 1, other...);
 }
 
 template<typename... Args>
-std::string report(Args... args) {
+auto report(Args... args) -> std::string {
   std::ostringstream out;
   partialReport(out, 1, args...);
   return out.str();
@@ -36,10 +35,9 @@ std::string report(Args... args) {
  * @param file The source file in which the error occurred
  * @param line The line number at which the error occurred
  */
-[[noreturn]] void assertError(
-    std::string_view msg, std::string_view expr, std::string_view info,
-    std::string_view file, std::size_t line
-);
+[[noreturn]] void assertError(std::string_view msg, std::string_view expr,
+                              std::string_view info, std::string_view file,
+                              std::size_t line);
 
 /**
  * @def lox_assert(cond, msg)
@@ -51,8 +49,7 @@ std::string report(Args... args) {
   if (!(cond)) {                                                               \
     jakobteuber::util::error::assertError(                                     \
         msg, #cond, jakobteuber::util::error::report(__VA_ARGS__), __FILE__,   \
-        __LINE__                                                               \
-    );                                                                         \
+        __LINE__);                                                             \
   }
 
 /**

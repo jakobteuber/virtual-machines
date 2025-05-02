@@ -14,7 +14,7 @@ concept VirtualMachine = requires(VM vm, std::string_view text) {
   { VM::loadInstructions(text) } -> std::same_as<VM>;
 };
 
-std::string readFile(std::string_view name);
+auto readFile(std::string_view name) -> std::string;
 
 } // namespace vm::common
 

@@ -1,10 +1,11 @@
 #include "lib/Error.hpp"
-#include <backward.hpp>
+
 #include <cstddef>
-#include <exception>
+#include <cstdlib>
 #include <print>
-#include <sstream>
 #include <string_view>
+
+#include <backward.hpp>
 
 namespace {
 
@@ -20,10 +21,11 @@ void printStackTrace() {
 
 } // namespace
 
-[[noreturn]] void jakobteuber::util::error::assertError(
-    std::string_view msg, std::string_view expr, std::string_view info,
-    std::string_view file, std::size_t line
-) {
+namespace jakobteuber::util::error {
+
+[[noreturn]] void assertError(std::string_view msg, std::string_view expr,
+                              std::string_view info, std::string_view file,
+                              std::size_t line) {
   std::println("\033[1;31m{}:{}:\033[0m", file, line);
   std::println("\033[31m{}", msg);
   std::println("\t{}", expr);
@@ -33,3 +35,5 @@ void printStackTrace() {
   printStackTrace();
   std::exit(EXIT_FAILURE);
 }
+
+} // namespace jakobteuber::util::error
