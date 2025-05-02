@@ -1,14 +1,16 @@
 #ifndef TUM_I2_VM_LIB_C_MACHINE
 #define TUM_I2_VM_LIB_C_MACHINE
 
+#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string_view>
+#include <vector>
 
 namespace vm::cma {
 
 struct Instr {
-  enum Type {
+  enum Type : std::uint8_t {
     Loadc,
     // Arithmetic and logical (as introduced in Simple expressions and
     // assignments)
@@ -47,9 +49,9 @@ struct Instr {
     Alloc
   };
 
-  static std::string_view toString(Type t);
-  static Type fromString(std::string_view name);
-  static unsigned numberOfArguments(Type t);
+  static auto toString(Type t) -> std::string_view;
+  static auto fromString(std::string_view name) -> Type;
+  static auto numberOfArguments(Type t) -> unsigned int;
   static void print(std::span<Instr> instructions);
 
   Type type;
@@ -57,17 +59,23 @@ struct Instr {
 };
 
 class CMa {
-  std::span<Instr> instructions;
+  std::vector<Instr> instructions;
+  std::size_t programCounter = 0;
+
+  static constexpr std::size_t memorySize = 1ULL << 20;
+
+  std::vector<std::int32_t> memory = std::vector<std::int32_t>(memorySize);
+  std::size_t stackPointer = 0;
 
 public:
-  CMa(std::span<Instr> instructions) :
+  explicit CMa(const std::vector<Instr>& instructions) :
       instructions {instructions} {};
 
   void step();
-  int run();
+  auto run() -> int;
   void execute(Instr instruction);
 
-  static CMa loadInstructions(std::string_view name);
+  static auto loadInstructions(std::string_view name) -> CMa;
 };
 
 } // namespace vm::cma
