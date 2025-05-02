@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.9)
-project(Project)
+cmake_minimum_required(VERSION 3.10)
+project(VirtualMachines)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -fdiagnostics-color=always")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -fdiagnostics-color=always -g")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
@@ -15,7 +15,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 include("${CMAKE_SOURCE_DIR}/vendor/clang-tidy.cmake")
 include("${CMAKE_SOURCE_DIR}/vendor/googletest.cmake")
-include("${CMAKE_SOURCE_DIR}/vendor/BoostStacktrace.cmake")
+include("${CMAKE_SOURCE_DIR}/vendor/Backward.cmake")
 
 include_directories(
     ${CMAKE_SOURCE_DIR}
@@ -34,12 +34,12 @@ set(GENERATED_CPP)
 # Targets
 # ---------------------------------------------------------------------------
 add_library(lib STATIC ${LIB_CPP} ${GENERATED_CPP})
-target_link_libraries(lib Threads::Threads Boost::stacktrace_basic Boost::stacktrace_addr2line)
+target_link_libraries(lib Threads::Threads Backward::Interface)
 target_compile_options(lib PRIVATE "-Werror")
 
-add_executable(main ${TOOLS_CPP})
-target_link_libraries(main lib)
-target_compile_options(main PRIVATE "-Werror")
+add_executable(cma "${CMAKE_SOURCE_DIR}/tools/CMa.cpp")
+target_link_libraries(cma lib)
+target_compile_options(cma PRIVATE "-Werror")
 
 # ---------------------------------------------------------------------------
 # Tests

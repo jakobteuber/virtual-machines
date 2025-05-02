@@ -1,5 +1,5 @@
 #include "lib/Error.hpp"
-#include <boost/stacktrace/stacktrace.hpp>
+#include <backward.hpp>
 #include <cstddef>
 #include <exception>
 #include <print>
@@ -8,23 +8,28 @@
 
 namespace {
 
+const backward::SignalHandling s = {};
+
 void printStackTrace() {
-  auto trace = boost::stacktrace::stacktrace();
-  auto asText = std::ostringstream();
-  asText << trace;
-  std::print("{}", asText.str());
+  using namespace backward;
+  StackTrace s;
+  constexpr std::size_t max_depth = 30;
+  s.load_here(max_depth);
+  Printer().print(s);
 }
 
 } // namespace
 
 [[noreturn]] void jakobteuber::util::error::assertError(
-    std::string_view msg, std::string_view expr, std::string_view file,
-    std::size_t line
+    std::string_view msg, std::string_view expr, std::string_view info,
+    std::string_view file, std::size_t line
 ) {
-  std::println("\033[1;31m{}:{}:\033[0m\033[31m", file, line);
-  std::println("{}", msg);
+  std::println("\033[1;31m{}:{}:\033[0m", file, line);
+  std::println("\033[31m{}", msg);
   std::println("\t{}", expr);
-  printStackTrace();
+  std::println("{}", info);
   std::println("\033[0m");
-  std::terminate();
+
+  printStackTrace();
+  std::exit(EXIT_FAILURE);
 }
