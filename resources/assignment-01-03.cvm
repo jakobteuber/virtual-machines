@@ -1,0 +1,16 @@
+loadc 3
+loadc 10
+dup
+mul
+mul
+loadc 2
+loadc 10
+mul
+add
+loadc 1
+add
+loadc 15
+loadc 42
+sub
+div
+debug

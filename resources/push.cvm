@@ -1,0 +1,9 @@
+        loadc 12
+loop:   dup
+        loadc 1
+        sub
+        dup
+        jumpz end
+        debug
+        jump loop 
+end:    debug
