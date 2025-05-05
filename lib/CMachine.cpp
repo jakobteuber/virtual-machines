@@ -22,77 +22,6 @@ namespace vm::cma {
 
 static_assert(vm::common::VirtualMachine<CMa>);
 
-namespace {
-
-constexpr std::array<std::string_view, 27> names = {
-    "LOADC", "ADD",  "SUB",   "MUL",   "DIV",   "MOD",   "AND",
-    "OR",    "XOR",  "EQ",    "NEQ",   "LE",    "LEQ",   "GR",
-    "GEQ",   "NOT",  "NEG",   "LOAD",  "STORE", "LOADA", "STOREA",
-    "POP",   "JUMP", "JUMPZ", "JUMPI", "DUP",   "ALLOC"};
-
-static const std::unordered_map<std::string_view, Instr::Type> namesToEnum = {
-    {"LOADC",  Instr::Loadc },
-    {"ADD",    Instr::Add   },
-    {"SUB",    Instr::Sub   },
-    {"MUL",    Instr::Mul   },
-    {"DIV",    Instr::Div   },
-    {"MOD",    Instr::Mod   },
-    {"AND",    Instr::And   },
-    {"OR",     Instr::Or    },
-    {"XOR",    Instr::Xor   },
-    {"EQ",     Instr::Eq    },
-    {"NEQ",    Instr::Neq   },
-    {"LE",     Instr::Le    },
-    {"LEQ",    Instr::Leq   },
-    {"GR",     Instr::Gr    },
-    {"GEQ",    Instr::Geq   },
-    {"NOT",    Instr::Not   },
-    {"NEG",    Instr::Neg   },
-    {"LOAD",   Instr::Load  },
-    {"STORE",  Instr::Store },
-    {"LOADA",  Instr::Loada },
-    {"STOREA", Instr::Storea},
-    {"POP",    Instr::Pop   },
-    {"JUMP",   Instr::Jump  },
-    {"JUMPZ",  Instr::Jumpz },
-    {"JUMPI",  Instr::Jumpi },
-    {"DUP",    Instr::Dup   },
-    {"ALLOC",  Instr::Alloc }
-};
-
-}; // namespace
-
-auto Instr::toString(Type t) -> std::string_view {
-  auto index = static_cast<unsigned>(t);
-  dbg_assert(0 <= index && index < names.size(), "Bad enum tag", t);
-  return names[index];
-}
-
-auto Instr::fromString(std::string_view name) -> Instr::Type {
-  std::string canonical = {};
-  std::ranges::transform(name, std::back_inserter(canonical),
-                         [](unsigned char c) { return std::toupper(c); });
-  auto iter = namesToEnum.find(canonical);
-
-  dbg_assert_neq(iter, namesToEnum.end(), "Bad enum constant", name, canonical);
-  return iter->second;
-}
-
-auto Instr::numberOfArguments(Type t) -> unsigned int {
-  switch (t) {
-  case Instr::Loadc:
-  case Instr::Load:
-  case Instr::Store:
-  case Instr::Loada:
-  case Instr::Storea:
-  case Instr::Jump:
-  case Instr::Jumpi:
-  case Instr::Jumpz:
-  case Instr::Alloc: return 1;
-  default: return 0;
-  }
-}
-
 void Instr::print(std::span<Instr> instructions) {
   std::println("{} instructions", instructions.size());
   for (Instr i: instructions) {
@@ -115,6 +44,10 @@ auto CMa::run() -> int {
 
 void CMa::execute(Instr instruction) {
   switch (instruction.type) {
+  case Instr::Debug: {
+    debug();
+  } break;
+
   case Instr::Loadc: {
     stackPointer += 1;
     memory[stackPointer] = instruction.arg;
@@ -157,8 +90,9 @@ void CMa::execute(Instr instruction) {
 
   case Instr::Xor: {
     stackPointer -= 1;
-    // TODO: what’s the semantics of this ?
-    memory[stackPointer] = memory[stackPointer] ^ memory[stackPointer + 1];
+    // Weird non-C semantics: logical exclusive or.
+    memory[stackPointer] =
+        (memory[stackPointer] != 0) ^ (memory[stackPointer + 1] != 0);
   } break;
 
   case Instr::Eq: {
@@ -196,7 +130,6 @@ void CMa::execute(Instr instruction) {
   } break;
 
   case Instr::Not: {
-    // TODO: Boolean negation or ones-complement?
     memory[stackPointer] = !memory[stackPointer];
   } break;
 
@@ -247,6 +180,83 @@ void CMa::execute(Instr instruction) {
 
   default: dbg_fail("Bad instruction", instruction.type, instruction.arg);
   }
+}
+
+void CMa::debug() {
+  std::println("CMa state: SP = {}, PC = {}", stackPointer, programCounter);
+  constexpr std::size_t maxStackCount = 10;
+  std::size_t start = std::max(maxStackCount, stackPointer) - maxStackCount;
+  std::print("    stack: ");
+  if (start > 0) { std::print("...   "); }
+  for (std::size_t i = start; i <= stackPointer; ++i) {
+    std::print("{}   ", memory[i]);
+  }
+  std::println("<- top");
+}
+
+auto Instr::numberOfArguments(Type t) -> unsigned int {
+  switch (t) {
+  case Instr::Loadc:
+  case Instr::Loada:
+  case Instr::Storea:
+  case Instr::Jump:
+  case Instr::Jumpi:
+  case Instr::Jumpz:
+  case Instr::Alloc: return 1;
+  default: return 0;
+  }
+}
+
+auto Instr ::toString(Instr ::Type enumValue) -> std::string_view {
+  constexpr std::array<std::string_view, 28> names = {
+      "debug",  "loadc", "add",  "sub",   "mul",   "div",   "mod",
+      "and",    "or",    "xor",  "eq",    "neq",   "le",    "leq",
+      "gr",     "geq",   "not",  "neg",   "load",  "store", "loada",
+      "storea", "pop",   "jump", "jumpz", "jumpi", "dup",   "alloc"};
+  auto index = static_cast<std::size_t>(enumValue);
+  dbg_assert(0 <= index && index < names.size(), "Bad enum tag for Instr::Type",
+             enumValue);
+  return names[index];
+}
+
+auto Instr ::fromString(std::string_view name) -> Instr ::Type {
+  static const std::unordered_map<std::string_view, Instr ::Type> names = {
+      {"debug",  Type::Debug },
+      {"loadc",  Type::Loadc },
+      {"add",    Type::Add   },
+      {"sub",    Type::Sub   },
+      {"mul",    Type::Mul   },
+      {"div",    Type::Div   },
+      {"mod",    Type::Mod   },
+      {"and",    Type::And   },
+      {"or",     Type::Or    },
+      {"xor",    Type::Xor   },
+      {"eq",     Type::Eq    },
+      {"neq",    Type::Neq   },
+      {"le",     Type::Le    },
+      {"leq",    Type::Leq   },
+      {"gr",     Type::Gr    },
+      {"geq",    Type::Geq   },
+      {"not",    Type::Not   },
+      {"neg",    Type::Neg   },
+      {"load",   Type::Load  },
+      {"store",  Type::Store },
+      {"loada",  Type::Loada },
+      {"storea", Type::Storea},
+      {"pop",    Type::Pop   },
+      {"jump",   Type::Jump  },
+      {"jumpz",  Type::Jumpz },
+      {"jumpi",  Type::Jumpi },
+      {"dup",    Type::Dup   },
+      {"alloc",  Type::Alloc }
+  };
+  std::string canonical = {};
+  std::ranges::transform(name, std::back_inserter(canonical),
+                         [](unsigned char c) { return std::tolower(c); });
+  auto iter = names.find(canonical);
+  dbg_assert_neq(iter, names.end(), "Bad enum name for Instr::Type", name,
+                 canonical);
+  return iter->second;
 }
 
 namespace {
@@ -338,7 +348,7 @@ class Parser {
     if (mode == Mode::GatherLabels) { jumpLabels.insert({name, instr_number}); }
   }
 
-  void handleInstruction(Instr::Type t, std::int32_t arg = 0) {
+  void handleInstruction(Instr::Type t, std::int32_t arg = 1) {
     if (mode == Mode::EmitInstructions) { instructions.push_back({t, arg}); }
     instr_number += 1;
   }

@@ -11,6 +11,7 @@ namespace vm::cma {
 
 struct Instr {
   enum Type : std::uint8_t {
+    Debug,
     Loadc,
     // Arithmetic and logical (as introduced in Simple expressions and
     // assignments)
@@ -59,6 +60,7 @@ struct Instr {
 };
 
 class CMa {
+private:
   std::vector<Instr> instructions;
   std::size_t programCounter = 0;
 
@@ -66,6 +68,9 @@ class CMa {
 
   std::vector<std::int32_t> memory = std::vector<std::int32_t>(memorySize);
   std::size_t stackPointer = 0;
+
+private:
+  void debug();
 
 public:
   explicit CMa(const std::vector<Instr>& instructions) :
