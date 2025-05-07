@@ -30,7 +30,14 @@ Debug,
     Jumpz,
     Jumpi,
     Dup,
-    Alloc
+    Alloc,
+    New,
+    Mark,
+    Call,
+    Slide,
+    Enter,
+    Return,
+    Halt
 """
 
 separator = ","
@@ -53,10 +60,9 @@ print('#include <cctype>')
 
 
 print("/* toString() */")
-print('auto ', namespace, '::toString(', namespace, '::',
-      enum_name, 'enumValue) -> std::string_view {')
-print("constexpr std::array<std::string_view,", len(
-    enums), "> names =", "{", ", ".join(enum_str), "};")
+print('auto ', namespace + '::toString(', namespace +
+      '::' + enum_name, 'enumValue) -> std::string_view {')
+print("constexpr std::array names =", "{", ", ".join(enum_str), "};")
 print('auto index = static_cast<std::size_t>(enumValue);')
 print('dbg_assert(0 <= index && index < names.size(), "Bad enum tag for ' +
       namespace + '::' + enum_name + '", enumValue);')
@@ -66,10 +72,10 @@ print('}\n')
 print("/* fromString(): */")
 pairs = ['{' + string + ', ' + enum_name + '::' + ident +
          '}' for (ident, string) in zip(enums, enum_str)]
-print('auto ', namespace,
-      '::fromString(std::string_view name) -> ', namespace, '::', enum_name, '{')
+print('auto ', namespace +
+      '::fromString(std::string_view name) -> ', namespace + '::' + enum_name, '{')
 print("static const std::unordered_map <std::string_view, ",
-      namespace, '::', enum_name, "> names = {", ', '.join(pairs), '};')
+      namespace + '::' + enum_name, "> names = {", ', '.join(pairs), '};')
 print("std::string canonical = {};")
 print("std::ranges::transform(name, std::back_inserter(canonical), ",
       "[](unsigned char c) { return std::tolower(c); });")

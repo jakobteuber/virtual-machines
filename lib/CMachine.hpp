@@ -1,7 +1,6 @@
 #ifndef TUM_I2_VM_LIB_C_MACHINE
 #define TUM_I2_VM_LIB_C_MACHINE
 
-#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string_view>
@@ -47,27 +46,41 @@ struct Instr {
     Jumpi,
     Dup,
     // Introduced in Storage Allocation for Variables
-    Alloc
+    Alloc,
+    New,
+    // Funktions
+    Mark,
+    Call,
+    Slide,
+    Enter,
+    Return,
+    Halt
   };
 
   static auto toString(Type t) -> std::string_view;
   static auto fromString(std::string_view name) -> Type;
-  static auto numberOfArguments(Type t) -> unsigned int;
+
+  static auto hasMandatoryArg(Type t) -> bool;
+  static auto hasOptionalArg(Type t) -> bool;
+
   static void print(std::span<Instr> instructions);
 
   Type type;
-  std::int32_t arg;
+  int arg;
 };
 
 class CMa {
 private:
   std::vector<Instr> instructions;
-  std::size_t programCounter = 0;
+  int programCounter = 0;
 
-  static constexpr std::size_t memorySize = 1ULL << 20;
+  static constexpr int memorySize = 1 << 20;
 
-  std::vector<std::int32_t> memory = std::vector<std::int32_t>(memorySize);
-  std::size_t stackPointer = 0;
+  std::vector<int> memory = std::vector<int>(memorySize);
+  int stackPointer = 0;
+  int framePointer = 0;
+  int extremePointer = 0;
+  int newPointer = memorySize - 1;
 
 private:
   void debug();
@@ -80,7 +93,7 @@ public:
   auto run() -> int;
   void execute(Instr instruction);
 
-  static auto loadInstructions(std::string_view name) -> CMa;
+  static auto loadInstructions(std::string_view text) -> CMa;
 };
 
 } // namespace vm::cma

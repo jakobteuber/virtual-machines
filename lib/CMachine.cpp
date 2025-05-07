@@ -9,7 +9,9 @@
 #include <charconv>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <iterator>
+#include <limits>
 #include <print>
 #include <span>
 #include <string>
@@ -23,22 +25,24 @@ namespace vm::cma {
 static_assert(vm::common::VirtualMachine<CMa>);
 
 void Instr::print(std::span<Instr> instructions) {
-  std::println("{} instructions", instructions.size());
+  std::println(stderr, "{} instructions", instructions.size());
   for (Instr i: instructions) {
-    std::print("{}", Instr::toString(i.type));
-    if (Instr::numberOfArguments(i.type) == 1) { std::print("\t{}", i.arg); }
-    std::println();
+    std::print(stderr, "{}", Instr::toString(i.type));
+    bool hasArg = Instr::hasMandatoryArg(i.type)
+               || (Instr::hasOptionalArg(i.type) && i.arg != 1);
+    if (hasArg) { std::print(stderr, "\t{}", i.arg); }
+    std::println(stderr);
   }
 }
 
 void CMa::step() {
-  const Instr instruction = instructions[programCounter];
+  Instr instruction = instructions[programCounter];
   programCounter += 1;
   execute(instruction);
 }
 
 auto CMa::run() -> int {
-  while (programCounter < instructions.size()) { step(); }
+  while (programCounter < std::ssize(instructions)) { step(); }
   return EXIT_SUCCESS;
 }
 
@@ -134,11 +138,20 @@ void CMa::execute(Instr instruction) {
   } break;
 
   case Instr::Load: {
-    memory[stackPointer] = memory[memory[stackPointer]];
+    int dest = memory[stackPointer];
+    int count = instruction.arg;
+    for (int i = 0; i < count; ++i) {
+      memory[stackPointer + i] = memory[dest + i];
+    }
+    stackPointer += count - 1;
   } break;
 
   case Instr::Store: {
-    memory[memory[stackPointer]] = memory[stackPointer - 1];
+    int dest = memory[stackPointer];
+    int count = instruction.arg;
+    for (int i = 0; i < count; ++i) {
+      memory[dest + i] = memory[stackPointer - count + i];
+    }
     stackPointer -= 1;
   } break;
 
@@ -152,7 +165,7 @@ void CMa::execute(Instr instruction) {
   } break;
 
   case Instr::Pop: {
-    stackPointer -= 1;
+    stackPointer -= instruction.arg;
   } break;
 
   case Instr::Dup: {
@@ -178,49 +191,101 @@ void CMa::execute(Instr instruction) {
     stackPointer += instruction.arg;
   } break;
 
+  case Instr::New: {
+    if (newPointer - memory[stackPointer] <= extremePointer) {
+      memory[stackPointer] = 0;
+    } else {
+      newPointer -= memory[stackPointer];
+      memory[stackPointer] = newPointer;
+    }
+  } break;
+
+  case Instr::Mark: {
+    memory[stackPointer + 1] = extremePointer;
+    memory[stackPointer + 2] = framePointer;
+    stackPointer += 2;
+  } break;
+
+  case Instr::Call: {
+    int returnAddr = memory[stackPointer];
+    memory[stackPointer] = programCounter;
+    framePointer = stackPointer;
+    programCounter = returnAddr;
+  } break;
+
+  case Instr::Slide: {
+    int returnValue = memory[stackPointer];
+    stackPointer -= instruction.arg;
+    memory[stackPointer] = returnValue;
+  } break;
+
+  case Instr::Enter: {
+    extremePointer = stackPointer + instruction.arg;
+    if (extremePointer >= newPointer) {
+      debug();
+      dbg_fail("Stack overflow");
+    }
+
+  } break;
+
+  case Instr::Return: {
+    programCounter = memory[framePointer];
+    extremePointer = memory[framePointer - 2];
+    if (extremePointer >= newPointer) {
+      debug();
+      dbg_fail("Stack overflow");
+    }
+    stackPointer = framePointer - 3;
+    framePointer = memory[stackPointer + 2];
+  } break;
+
+  case Instr::Halt: {
+    programCounter = std::numeric_limits<int>::max();
+  } break;
+
   default: dbg_fail("Bad instruction", instruction.type, instruction.arg);
   }
 }
 
 void CMa::debug() {
-  std::println("CMa state: SP = {}, PC = {}", stackPointer, programCounter);
-  constexpr std::size_t maxStackCount = 10;
-  std::size_t start = std::max(maxStackCount, stackPointer) - maxStackCount;
+  std::println("CMa state: SP = {}, PC = {}, FP = {}, EP = {}, NP = {}",
+               stackPointer, programCounter, framePointer, extremePointer,
+               newPointer);
+  constexpr int maxStackCount = 10;
+  int start = std::max(maxStackCount, stackPointer) - maxStackCount;
   std::print("    stack: ");
   if (start > 0) { std::print("...   "); }
-  for (std::size_t i = start; i <= stackPointer; ++i) {
+  for (int i = start; i <= stackPointer; ++i) {
     std::print("{}   ", memory[i]);
   }
   std::println("<- top");
 }
 
-auto Instr::numberOfArguments(Type t) -> unsigned int {
-  switch (t) {
-  case Instr::Loadc:
-  case Instr::Loada:
-  case Instr::Storea:
-  case Instr::Jump:
-  case Instr::Jumpi:
-  case Instr::Jumpz:
-  case Instr::Alloc: return 1;
-  default: return 0;
-  }
+auto Instr::hasMandatoryArg(Type t) -> bool {
+  return t == Instr::Loadc || t == Instr::Loada || t == Instr::Storea
+      || t == Instr::Jump || t == Instr::Jumpi || t == Instr::Jumpz
+      || t == Instr::Alloc || t == Instr::Enter || t == Instr::Slide;
 }
 
-auto Instr ::toString(Instr ::Type enumValue) -> std::string_view {
-  constexpr std::array<std::string_view, 28> names = {
-      "debug",  "loadc", "add",  "sub",   "mul",   "div",   "mod",
-      "and",    "or",    "xor",  "eq",    "neq",   "le",    "leq",
-      "gr",     "geq",   "not",  "neg",   "load",  "store", "loada",
-      "storea", "pop",   "jump", "jumpz", "jumpi", "dup",   "alloc"};
+auto Instr::hasOptionalArg(Type t) -> bool {
+  return t == Instr::Pop || t == Instr::Load || t == Instr::Store;
+}
+
+auto Instr::toString(Instr ::Type enumValue) -> std::string_view {
+  constexpr std::array names = {
+      "debug",  "loadc", "add",  "sub",   "mul",   "div",    "mod",
+      "and",    "or",    "xor",  "eq",    "neq",   "le",     "leq",
+      "gr",     "geq",   "not",  "neg",   "load",  "store",  "loada",
+      "storea", "pop",   "jump", "jumpz", "jumpi", "dup",    "alloc",
+      "new",    "mark",  "call", "slide", "enter", "return", "halt"};
   auto index = static_cast<std::size_t>(enumValue);
   dbg_assert(0 <= index && index < names.size(), "Bad enum tag for Instr::Type",
              enumValue);
   return names[index];
 }
 
-auto Instr ::fromString(std::string_view name) -> Instr ::Type {
-  static const std::unordered_map<std::string_view, Instr ::Type> names = {
+auto Instr ::fromString(std::string_view name) -> Instr::Type {
+  static const std::unordered_map<std::string_view, Instr::Type> names = {
       {"debug",  Type::Debug },
       {"loadc",  Type::Loadc },
       {"add",    Type::Add   },
@@ -248,7 +313,14 @@ auto Instr ::fromString(std::string_view name) -> Instr ::Type {
       {"jumpz",  Type::Jumpz },
       {"jumpi",  Type::Jumpi },
       {"dup",    Type::Dup   },
-      {"alloc",  Type::Alloc }
+      {"alloc",  Type::Alloc },
+      {"new",    Type::New   },
+      {"mark",   Type::Mark  },
+      {"call",   Type::Call  },
+      {"slide",  Type::Slide },
+      {"enter",  Type::Enter },
+      {"return", Type::Return},
+      {"halt",   Type::Halt  }
   };
   std::string canonical = {};
   std::ranges::transform(name, std::back_inserter(canonical),
@@ -275,13 +347,13 @@ class Parser {
   auto peek() -> char { return atEnd() ? '\0' : text[position]; }
 
   auto advance() -> char {
-    const char c = peek();
+    char c = peek();
     position++;
     return c;
   }
 
   void consume(char c) {
-    if (peek() != c) dbg_fail("Expected different char", peek());
+    if (peek() != c) { dbg_fail("Expected different char", peek()); }
     advance();
   }
 
@@ -314,7 +386,7 @@ class Parser {
 
   auto consumeColon() -> bool {
     skip();
-    const bool hasColon = peek() == ':';
+    bool hasColon = peek() == ':';
     if (hasColon) { consume(':'); }
     skip();
     return hasColon;
@@ -322,7 +394,7 @@ class Parser {
 
   auto readWord() -> std::string_view {
     skip();
-    const std::size_t start = position;
+    std::size_t start = position;
     while (std::isalnum(peek()) && !atEnd()) { advance(); }
     auto w = text.substr(start, position - start);
     skip();
@@ -331,7 +403,7 @@ class Parser {
 
   auto readNumber() -> std::int32_t {
     skip();
-    const std::size_t start = position;
+    std::size_t start = position;
     if (peek() == '-' || peek() == '+') { advance(); }
     while (std::isdigit(peek()) && !atEnd()) { advance(); }
     auto literal = text.substr(start, position - start);
@@ -355,17 +427,16 @@ class Parser {
 
   void handleInstruction(Instr::Type t, std::string_view label) {
     if (mode == Mode::EmitInstructions) {
-      const std::int32_t address = jumpLabels.at(label);
+      std::int32_t address = jumpLabels.at(label);
       instructions.push_back({t, address});
     }
     instr_number += 1;
   }
 
   void parseInstruction(std::string_view word) {
-    const Instr::Type instructionType = Instr::fromString(word);
-    const std::uint32_t argCount = Instr::numberOfArguments(instructionType);
+    Instr::Type instructionType = Instr::fromString(word);
 
-    if (argCount == 1) {
+    if (Instr::hasMandatoryArg(instructionType)) {
       if (std::isalpha(peek())) {
         handleInstruction(instructionType, readWord());
       } else if (std::isdigit(peek())) {
@@ -373,10 +444,15 @@ class Parser {
       } else {
         dbg_fail("bad char", peek());
       }
-    } else if (argCount == 0) {
-      handleInstruction(instructionType);
+    } else if (Instr::hasOptionalArg(instructionType)) {
+      if (std::isdigit(peek())) {
+        handleInstruction(instructionType, readNumber());
+      } else {
+        handleInstruction(instructionType);
+      }
+
     } else {
-      dbg_fail("bad number of arguments", argCount);
+      handleInstruction(instructionType);
     }
   }
 
@@ -406,7 +482,6 @@ public:
     walk(Mode::GatherLabels);
     walk(Mode::EmitInstructions);
 
-    Instr::print(instructions);
     return std::move(instructions);
   }
 };
@@ -414,7 +489,7 @@ public:
 }; // namespace
 
 auto CMa::loadInstructions(std::string_view text) -> CMa {
-  const std::vector instructions = Parser(text).parse();
+  std::vector instructions = Parser(text).parse();
   return CMa(instructions);
 }
 
