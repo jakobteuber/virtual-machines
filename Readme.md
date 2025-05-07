@@ -1,9 +1,6 @@
-C++ Project Template
-=====================
+Virtual Machines
+================
 
+Implementations for (roughly) the virtual machines described in 
+> Seidl, Helmut and  Wilhelm, Reinhard [*Compiler Design — Virtual Machines*](https://link.springer.com/book/10.1007/978-3-642-14909-2), Springer 2010.
 
-Setup
------
-
-1. Set the project name in `CMakeList.txt`
-2. Set the project name and description in `Doxyfile`
