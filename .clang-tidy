@@ -1,6 +1,6 @@
 ---
 Checks: 'bugprone*,google*,llvm-namespace-comment,misc*,modernize*,performance*,
 -bugprone-easily-swappable-parameters,-google-build-using-namespace,
--google-readability-todo,-modernize-return-braced-init-list'
+-google-readability-todo,-modernize-return-braced-init-list,-misc-const-correctness'
 HeaderFilterRegex: '.*'
 
