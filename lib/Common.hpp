@@ -7,6 +7,9 @@
 
 namespace vm::common {
 
+/**
+ * @brief Interface for a virtual machine
+ */
 template<typename VM>
 concept VirtualMachine = requires(VM vm, std::string_view text) {
   { vm.step() } -> std::same_as<void>;
@@ -14,6 +17,11 @@ concept VirtualMachine = requires(VM vm, std::string_view text) {
   { VM::loadInstructions(text) } -> std::same_as<VM>;
 };
 
+/**
+ * @brief Loads the entire contents of a file into a string
+ * @param name the file's path
+ * @return the file's contents
+ */
 auto readFile(std::string_view name) -> std::string;
 
 } // namespace vm::common

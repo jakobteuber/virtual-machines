@@ -57,12 +57,40 @@ struct Instr {
     Halt
   };
 
+  /**
+   * @brief Converts an instruction type to its string representation.
+   * @param enumValue The instruction type.
+   * @return A string view of the instruction's name.
+   */
   static auto toString(Type t) -> std::string_view;
+
+  /**
+   * @brief Converts a string to its corresponding instruction type.
+   * @param name The string representation of the instruction.
+   * @return The corresponding instruction type.
+   */
   static auto fromString(std::string_view name) -> Type;
 
+  /**
+   * @brief Checks if an instruction type requires a mandatory argument.
+   * @param t The instruction type.
+   * @return True if the instruction requires a mandatory argument, false
+   * otherwise.
+   */
   static auto hasMandatoryArg(Type t) -> bool;
+
+  /**
+   * @brief Checks if an instruction type allows an optional argument.
+   * @param t The instruction type.
+   * @return True if the instruction allows an optional argument, false
+   * otherwise.
+   */
   static auto hasOptionalArg(Type t) -> bool;
 
+  /**
+   * @brief Prints a list of instructions to stderr.
+   * @param instructions A span of instructions to print.
+   */
   static void print(std::span<Instr> instructions);
 
   Type type;
@@ -83,16 +111,38 @@ private:
   int newPointer = memorySize - 1;
 
 private:
+  /**
+   * @brief Prints the current state of the virtual machine for debugging.
+   */
   void debug();
 
 public:
   explicit CMa(const std::vector<Instr>& instructions) :
       instructions {instructions} {};
 
+  /**
+   * @brief Executes a single instruction and advances the program counter.
+   */
   void step();
+
+  /**
+   * @brief Runs the virtual machine until all instructions are executed.
+   * @return Exit status of the virtual machine.
+   */
   auto run() -> int;
+
+  /**
+   * @brief Executes a single instruction based on its type.
+   * @param instruction The instruction to execute.
+   */
   void execute(Instr instruction);
 
+  /**
+   * @brief Loads instructions from a textual representation into a CMa
+   * instance.
+   * @param text The textual representation of instructions.
+   * @return A CMa instance with the loaded instructions.
+   */
   static auto loadInstructions(std::string_view text) -> CMa;
 };
 
