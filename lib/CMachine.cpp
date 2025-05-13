@@ -26,11 +26,13 @@ static_assert(vm::common::VirtualMachine<CMa>);
 
 void Instr::print(std::span<Instr> instructions) {
   std::println(stderr, "{} instructions", instructions.size());
-  for (Instr i: instructions) {
+  for (Instr i : instructions) {
     std::print(stderr, "{}", Instr::toString(i.type));
-    bool hasArg = Instr::hasMandatoryArg(i.type)
-               || (Instr::hasOptionalArg(i.type) && i.arg != 1);
-    if (hasArg) { std::print(stderr, "\t{}", i.arg); }
+    bool hasArg = Instr::hasMandatoryArg(i.type) ||
+                  (Instr::hasOptionalArg(i.type) && i.arg != 1);
+    if (hasArg) {
+      std::print(stderr, "\t{}", i.arg);
+    }
     std::println(stderr);
   }
 }
@@ -42,8 +44,10 @@ void CMa::step() {
 }
 
 auto CMa::run() -> int {
-  while (programCounter < std::ssize(instructions)) { step(); }
-  return EXIT_SUCCESS;
+  while (programCounter < std::ssize(instructions)) {
+    step();
+  }
+  return memory[0];
 }
 
 void CMa::execute(Instr instruction) {
@@ -178,7 +182,9 @@ void CMa::execute(Instr instruction) {
   } break;
 
   case Instr::Jumpz: {
-    if (memory[stackPointer] == 0) { programCounter = instruction.arg; }
+    if (memory[stackPointer] == 0) {
+      programCounter = instruction.arg;
+    }
     stackPointer -= 1;
   } break;
 
@@ -259,29 +265,32 @@ void CMa::execute(Instr instruction) {
     programCounter = std::numeric_limits<int>::max();
   } break;
 
-  default: dbg_fail("Bad instruction", instruction.type, instruction.arg);
+  default:
+    dbg_fail("Bad instruction", instruction.type, instruction.arg);
   }
 }
 
 void CMa::debug() {
-  std::println("CMa state: SP = {}, PC = {}, FP = {}, EP = {}, NP = {}",
+  std::println(out, "CMa state: SP = {}, PC = {}, FP = {}, EP = {}, NP = {}",
                stackPointer, programCounter, framePointer, extremePointer,
                newPointer);
   constexpr int maxStackCount = 10;
   int start = std::max(maxStackCount, stackPointer) - maxStackCount;
-  std::print("    stack: ");
-  if (start > 0) { std::print("...   "); }
-  for (int i = start; i <= stackPointer; ++i) {
-    std::print("{}   ", memory[i]);
+  std::print(out, "    stack: ");
+  if (start > 0) {
+    std::print(out, "...   ");
   }
-  std::println("<- top");
+  for (int i = start; i <= stackPointer; ++i) {
+    std::print(out, "{}   ", memory[i]);
+  }
+  std::println(out, "<- top");
 }
 
 auto Instr::hasMandatoryArg(Type t) -> bool {
-  return t == Instr::Loadc || t == Instr::Loada || t == Instr::Storea
-      || t == Instr::Jump || t == Instr::Jumpi || t == Instr::Jumpz
-      || t == Instr::Alloc || t == Instr::Enter || t == Instr::Slide
-      || t == Instr::Loadrc || t == Instr::Loadr || t == Instr::Storer;
+  return t == Instr::Loadc || t == Instr::Loada || t == Instr::Storea ||
+         t == Instr::Jump || t == Instr::Jumpi || t == Instr::Jumpz ||
+         t == Instr::Alloc || t == Instr::Enter || t == Instr::Slide ||
+         t == Instr::Loadrc || t == Instr::Loadr || t == Instr::Storer;
 }
 
 auto Instr::hasOptionalArg(Type t) -> bool {
@@ -303,45 +312,25 @@ auto Instr::toString(Instr ::Type enumValue) -> std::string_view {
 
 auto Instr ::fromString(std::string_view name) -> Instr::Type {
   static const std::unordered_map<std::string_view, Instr::Type> names = {
-      {"debug",  Type::Debug },
-      {"loadc",  Type::Loadc },
-      {"add",    Type::Add   },
-      {"sub",    Type::Sub   },
-      {"mul",    Type::Mul   },
-      {"div",    Type::Div   },
-      {"mod",    Type::Mod   },
-      {"and",    Type::And   },
-      {"or",     Type::Or    },
-      {"xor",    Type::Xor   },
-      {"eq",     Type::Eq    },
-      {"neq",    Type::Neq   },
-      {"le",     Type::Le    },
-      {"leq",    Type::Leq   },
-      {"gr",     Type::Gr    },
-      {"geq",    Type::Geq   },
-      {"not",    Type::Not   },
-      {"neg",    Type::Neg   },
-      {"load",   Type::Load  },
-      {"store",  Type::Store },
-      {"loada",  Type::Loada },
-      {"storea", Type::Storea},
-      {"pop",    Type::Pop   },
-      {"jump",   Type::Jump  },
-      {"jumpz",  Type::Jumpz },
-      {"jumpi",  Type::Jumpi },
-      {"dup",    Type::Dup   },
-      {"alloc",  Type::Alloc },
-      {"new",    Type::New   },
-      {"mark",   Type::Mark  },
-      {"call",   Type::Call  },
-      {"slide",  Type::Slide },
-      {"enter",  Type::Enter },
-      {"return", Type::Return},
-      {"loadrc", Type::Loadrc},
-      {"loadr",  Type::Loadr },
-      {"storer", Type::Storer},
-      {"halt",   Type::Halt  }
-  };
+      {"debug", Type::Debug},   {"loadc", Type::Loadc},
+      {"add", Type::Add},       {"sub", Type::Sub},
+      {"mul", Type::Mul},       {"div", Type::Div},
+      {"mod", Type::Mod},       {"and", Type::And},
+      {"or", Type::Or},         {"xor", Type::Xor},
+      {"eq", Type::Eq},         {"neq", Type::Neq},
+      {"le", Type::Le},         {"leq", Type::Leq},
+      {"gr", Type::Gr},         {"geq", Type::Geq},
+      {"not", Type::Not},       {"neg", Type::Neg},
+      {"load", Type::Load},     {"store", Type::Store},
+      {"loada", Type::Loada},   {"storea", Type::Storea},
+      {"pop", Type::Pop},       {"jump", Type::Jump},
+      {"jumpz", Type::Jumpz},   {"jumpi", Type::Jumpi},
+      {"dup", Type::Dup},       {"alloc", Type::Alloc},
+      {"new", Type::New},       {"mark", Type::Mark},
+      {"call", Type::Call},     {"slide", Type::Slide},
+      {"enter", Type::Enter},   {"return", Type::Return},
+      {"loadrc", Type::Loadrc}, {"loadr", Type::Loadr},
+      {"storer", Type::Storer}, {"halt", Type::Halt}};
   std::string canonical = {};
   std::ranges::transform(name, std::back_inserter(canonical),
                          [](unsigned char c) { return std::tolower(c); });
@@ -373,14 +362,18 @@ class Parser {
   }
 
   void consume(char c) {
-    if (peek() != c) { dbg_fail("Expected different char", peek()); }
+    if (peek() != c) {
+      dbg_fail("Expected different char", peek());
+    }
     advance();
   }
 
   void skipComments() {
     consume('/');
     consume('/');
-    while (peek() != '\n' && !atEnd()) { advance(); }
+    while (peek() != '\n' && !atEnd()) {
+      advance();
+    }
     consume('\n');
   }
 
@@ -388,8 +381,18 @@ class Parser {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r';
   }
 
+  auto isNumeric(char c) -> bool { return ('0' <= c && c <= '9') || c == '-'; }
+
+  auto isIdentStart(char c) -> bool {
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
+  }
+
+  auto isIdentPart(char c) -> bool { return isIdentStart(c) || isNumeric(c); }
+
   void skipWhiteSpace() {
-    while (isBlank(peek()) && !atEnd()) { advance(); }
+    while (isBlank(peek()) && !atEnd()) {
+      advance();
+    }
   }
 
   void skip() {
@@ -407,7 +410,9 @@ class Parser {
   auto consumeColon() -> bool {
     skip();
     bool hasColon = peek() == ':';
-    if (hasColon) { consume(':'); }
+    if (hasColon) {
+      consume(':');
+    }
     skip();
     return hasColon;
   }
@@ -415,7 +420,9 @@ class Parser {
   auto readWord() -> std::string_view {
     skip();
     std::size_t start = position;
-    while (std::isalnum(peek()) && !atEnd()) { advance(); }
+    while (isIdentPart(peek()) && !atEnd()) {
+      advance();
+    }
     auto w = text.substr(start, position - start);
     skip();
     return w;
@@ -424,8 +431,12 @@ class Parser {
   auto readNumber() -> std::int32_t {
     skip();
     std::size_t start = position;
-    if (peek() == '-' || peek() == '+') { advance(); }
-    while (std::isdigit(peek()) && !atEnd()) { advance(); }
+    if (peek() == '-' || peek() == '+') {
+      advance();
+    }
+    while (isNumeric(peek()) && !atEnd()) {
+      advance();
+    }
     auto literal = text.substr(start, position - start);
     skip();
 
@@ -437,11 +448,15 @@ class Parser {
   }
 
   void registerLabel(std::string_view name) {
-    if (mode == Mode::GatherLabels) { jumpLabels.insert({name, instr_number}); }
+    if (mode == Mode::GatherLabels) {
+      jumpLabels.insert({name, instr_number});
+    }
   }
 
   void handleInstruction(Instr::Type t, std::int32_t arg = 1) {
-    if (mode == Mode::EmitInstructions) { instructions.push_back({t, arg}); }
+    if (mode == Mode::EmitInstructions) {
+      instructions.push_back({t, arg});
+    }
     instr_number += 1;
   }
 
@@ -457,20 +472,19 @@ class Parser {
     Instr::Type instructionType = Instr::fromString(word);
 
     if (Instr::hasMandatoryArg(instructionType)) {
-      if (std::isalpha(peek())) {
+      if (isIdentStart(peek())) {
         handleInstruction(instructionType, readWord());
-      } else if (std::isdigit(peek())) {
+      } else if (isNumeric(peek())) {
         handleInstruction(instructionType, readNumber());
       } else {
         dbg_fail("bad char", peek());
       }
     } else if (Instr::hasOptionalArg(instructionType)) {
-      if (std::isdigit(peek())) {
+      if (isNumeric(peek())) {
         handleInstruction(instructionType, readNumber());
       } else {
         handleInstruction(instructionType);
       }
-
     } else {
       handleInstruction(instructionType);
     }
@@ -491,12 +505,13 @@ class Parser {
     instr_number = 0;
     instructions.clear();
 
-    for (skip(); !atEnd(); skip()) { consumeWord(); }
+    for (skip(); !atEnd(); skip()) {
+      consumeWord();
+    }
   }
 
 public:
-  explicit Parser(std::string_view text) :
-      text {text} {}
+  explicit Parser(std::string_view text) : text{text} {}
 
   auto parse() -> std::vector<Instr> {
     walk(Mode::GatherLabels);
@@ -508,9 +523,8 @@ public:
 
 }; // namespace
 
-auto CMa::loadInstructions(std::string_view text) -> CMa {
-  std::vector instructions = Parser(text).parse();
-  return CMa(instructions);
+auto CMa::loadInstructions(std::string_view text) -> std::vector<Instr> {
+  return Parser(text).parse();
 }
 
 } // namespace vm::cma

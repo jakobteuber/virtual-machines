@@ -10,11 +10,10 @@ namespace vm::common {
 /**
  * @brief Interface for a virtual machine
  */
-template<typename VM>
+template <typename VM>
 concept VirtualMachine = requires(VM vm, std::string_view text) {
   { vm.step() } -> std::same_as<void>;
   { vm.run() } -> std::same_as<int>;
-  { VM::loadInstructions(text) } -> std::same_as<VM>;
 };
 
 /**

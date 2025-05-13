@@ -77,7 +77,7 @@ auto report(Args... args) -> std::string {
  * interpreter, and should not be considered an exceptional case for the
  * interpreter.
  */
-#define dbg_fail(msg, ...) dbg_assert(false, "unconditional fail", __VA_ARGS__)
+#define dbg_fail(msg, ...) dbg_assert(false, msg, __VA_ARGS__)
 
 } // namespace jakobteuber::util::error
 

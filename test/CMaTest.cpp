@@ -1,9 +1,10 @@
+#include <cstddef>
 #include <gtest/gtest.h>
 
 #include "lib/CMachine.hpp"
-#include "test/stdcapture.h"
+#include "lib/Error.hpp"
 
-#include <cstddef>
+#include <cstdio>
 #include <string>
 #include <string_view>
 
@@ -11,15 +12,27 @@ using namespace vm::cma;
 
 namespace {
 
-auto run(std::string_view instructions) -> std::string {
-  using capture::CaptureStdout;
-  std::string actualOutput;
-  CaptureStdout capture([&](const char* buf, std::size_t szbuf) {
-    actualOutput += std::string(buf, szbuf);
-  });
-  CMa vm = CMa::loadInstructions(instructions);
+auto run(std::string_view text) -> std::string {
+  auto instructions = CMa::loadInstructions(text);
+
+  FILE *f = std::tmpfile();
+  dbg_assert_neq(f, nullptr, "could not open file");
+  auto vm = CMa(instructions, f);
   vm.run();
-  return actualOutput;
+
+  std::fseek(f, 0, SEEK_END);
+  std::size_t size = std::ftell(f);
+  std::fseek(f, 0, SEEK_SET);
+
+  std::string output;
+  output.resize(size + 1);
+  std::fread(output.data(), 1, size, f);
+  output.back() = '\0';
+  output.resize(size);
+
+  std::fclose(f);
+
+  return output;
 }
 
 } // namespace

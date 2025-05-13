@@ -2,6 +2,7 @@
 #define TUM_I2_VM_LIB_C_MACHINE
 
 #include <cstdint>
+#include <cstdio>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -104,7 +105,7 @@ struct Instr {
 
 class CMa {
 private:
-  std::vector<Instr> instructions;
+  std::span<Instr> instructions;
   int programCounter = 0;
 
   static constexpr int memorySize = 1 << 20;
@@ -115,6 +116,8 @@ private:
   int extremePointer = 0;
   int newPointer = memorySize - 1;
 
+  FILE* out;
+
 private:
   /**
    * @brief Prints the current state of the virtual machine for debugging.
@@ -122,8 +125,12 @@ private:
   void debug();
 
 public:
-  explicit CMa(const std::vector<Instr>& instructions) :
-      instructions {instructions} {};
+  explicit CMa(std::span<Instr> instructions) :
+      instructions {instructions},
+      out {stdout} {}
+  CMa(std::span<Instr> instructions, FILE* out) :
+      instructions {instructions},
+      out {out} {}
 
   /**
    * @brief Executes a single instruction and advances the program counter.
@@ -148,7 +155,7 @@ public:
    * @param text The textual representation of instructions.
    * @return A CMa instance with the loaded instructions.
    */
-  static auto loadInstructions(std::string_view text) -> CMa;
+  static auto loadInstructions(std::string_view text) -> std::vector<Instr>;
 };
 
 } // namespace vm::cma

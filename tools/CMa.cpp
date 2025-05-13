@@ -5,6 +5,7 @@
 #include <print>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
 
@@ -20,17 +21,22 @@ auto run(std::string_view filename) -> int {
 
   const std::string text = readFile(filename);
 
-  CMa machine = CMa::loadInstructions(text);
-  const int exit = machine.run();
+  std::vector instructions = CMa::loadInstructions(text);
+  auto machine = CMa(instructions, stdout);
+  int exit = machine.run();
   return exit;
 }
 
 } // namespace
 
-auto main(int argc, char const* argv[]) -> int {
+auto main(int argc, char const *argv[]) -> int {
   try {
-    if (argc != 2) { wrongUsage(argv[0]); }
-    const std::string_view filename = argv[1];
+    if (argc != 2) {
+      wrongUsage(argv[0]);
+    }
+    std::string_view filename = argv[1];
     run(filename);
-  } catch (...) { return EXIT_FAILURE; }
+  } catch (...) {
+    return EXIT_FAILURE;
+  }
 }
