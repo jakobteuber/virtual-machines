@@ -37,6 +37,9 @@ Debug,
     Slide,
     Enter,
     Return,
+    Loadrc,
+    Loadr,
+    Storer,
     Halt
 """
 

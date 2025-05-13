@@ -54,6 +54,11 @@ struct Instr {
     Slide,
     Enter,
     Return,
+    // Local Variables
+    Loadrc,
+    Loadr,
+    Storer,
+    // Whole Programs
     Halt
   };
 

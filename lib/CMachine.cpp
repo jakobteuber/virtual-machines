@@ -228,6 +228,22 @@ void CMa::execute(Instr instruction) {
 
   } break;
 
+  case Instr::Loadrc: {
+    stackPointer += 1;
+    memory[stackPointer] = framePointer + instruction.arg;
+  } break;
+
+  case Instr::Loadr: {
+    int addr = framePointer + instruction.arg;
+    stackPointer += 1;
+    memory[stackPointer] = memory[addr];
+  } break;
+
+  case Instr::Storer: {
+    int addr = framePointer + instruction.arg;
+    memory[addr] = memory[stackPointer];
+  } break;
+
   case Instr::Return: {
     programCounter = memory[framePointer];
     extremePointer = memory[framePointer - 2];
@@ -264,7 +280,8 @@ void CMa::debug() {
 auto Instr::hasMandatoryArg(Type t) -> bool {
   return t == Instr::Loadc || t == Instr::Loada || t == Instr::Storea
       || t == Instr::Jump || t == Instr::Jumpi || t == Instr::Jumpz
-      || t == Instr::Alloc || t == Instr::Enter || t == Instr::Slide;
+      || t == Instr::Alloc || t == Instr::Enter || t == Instr::Slide
+      || t == Instr::Loadrc || t == Instr::Loadr || t == Instr::Storer;
 }
 
 auto Instr::hasOptionalArg(Type t) -> bool {
@@ -273,11 +290,11 @@ auto Instr::hasOptionalArg(Type t) -> bool {
 
 auto Instr::toString(Instr ::Type enumValue) -> std::string_view {
   constexpr std::array names = {
-      "debug",  "loadc", "add",  "sub",   "mul",   "div",    "mod",
-      "and",    "or",    "xor",  "eq",    "neq",   "le",     "leq",
-      "gr",     "geq",   "not",  "neg",   "load",  "store",  "loada",
-      "storea", "pop",   "jump", "jumpz", "jumpi", "dup",    "alloc",
-      "new",    "mark",  "call", "slide", "enter", "return", "halt"};
+      "debug", "loadc",  "add",    "sub",   "mul",    "div",    "mod",  "and",
+      "or",    "xor",    "eq",     "neq",   "le",     "leq",    "gr",   "geq",
+      "not",   "neg",    "load",   "store", "loada",  "storea", "pop",  "jump",
+      "jumpz", "jumpi",  "dup",    "alloc", "new",    "mark",   "call", "slide",
+      "enter", "return", "loadrc", "loadr", "storer", "halt"};
   auto index = static_cast<std::size_t>(enumValue);
   dbg_assert(0 <= index && index < names.size(), "Bad enum tag for Instr::Type",
              enumValue);
@@ -320,6 +337,9 @@ auto Instr ::fromString(std::string_view name) -> Instr::Type {
       {"slide",  Type::Slide },
       {"enter",  Type::Enter },
       {"return", Type::Return},
+      {"loadrc", Type::Loadrc},
+      {"loadr",  Type::Loadr },
+      {"storer", Type::Storer},
       {"halt",   Type::Halt  }
   };
   std::string canonical = {};
