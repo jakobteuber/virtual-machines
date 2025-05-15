@@ -9,17 +9,16 @@
 
 namespace jakobteuber::util::error {
 
-inline void partialReport(std::ostringstream&, unsigned) {}
+inline void partialReport(std::ostringstream &, unsigned) {}
 
-template<typename Arg, typename... Other>
-void partialReport(std::ostringstream& out, unsigned i, Arg arg,
+template <typename Arg, typename... Other>
+void partialReport(std::ostringstream &out, unsigned i, Arg arg,
                    Other... other) {
   out << '(' << i << ") `" << arg << "`\n";
   partialReport(out, i + 1, other...);
 }
 
-template<typename... Args>
-auto report(Args... args) -> std::string {
+template <typename... Args> auto report(Args... args) -> std::string {
   std::ostringstream out;
   partialReport(out, 1, args...);
   return out.str();
