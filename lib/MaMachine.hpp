@@ -18,6 +18,7 @@ enum Type : std::uint8_t {
   Debug,
   Print,
   Loadc,
+  Dup,
   Add,
   Sub,
   Mul,

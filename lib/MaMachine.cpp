@@ -54,10 +54,10 @@ namespace Instr {
 
 auto toString(Type enumValue) -> std::string_view {
   constexpr std::array names = {
-      "debug", "print",    "loadc",   "add",     "sub",      "mul",  "div",
-      "mod",   "and",      "or",      "xor",     "eq",       "neq",  "le",
-      "leq",   "gr",       "geq",     "not",     "neg",      "halt", "jump",
-      "jumpz", "getbasic", "mkbasic", "pushloc", "pushglob", "slide"};
+      "debug", "print", "loadc",    "dup",     "add",     "sub",      "mul",
+      "div",   "mod",   "and",      "or",      "xor",     "eq",       "neq",
+      "le",    "leq",   "gr",       "geq",     "not",     "neg",      "halt",
+      "jump",  "jumpz", "getbasic", "mkbasic", "pushloc", "pushglob", "slide"};
   auto index = static_cast<std::size_t>(enumValue);
   dbg_assert(0 <= index && index < names.size(), "Bad enum tag for Instr::Type",
              enumValue);
@@ -66,19 +66,33 @@ auto toString(Type enumValue) -> std::string_view {
 
 auto fromString(std::string_view name) -> Type {
   static const std::unordered_map<std::string_view, Instr::Type> names = {
-      {"debug", Type::Debug},       {"print", Type::Print},
-      {"loadc", Type::Loadc},       {"add", Type::Add},
-      {"sub", Type::Sub},           {"mul", Type::Mul},
-      {"div", Type::Div},           {"mod", Type::Mod},
-      {"and", Type::And},           {"or", Type::Or},
-      {"xor", Type::Xor},           {"eq", Type::Eq},
-      {"neq", Type::Neq},           {"le", Type::Le},
-      {"leq", Type::Leq},           {"gr", Type::Gr},
-      {"geq", Type::Geq},           {"not", Type::Not},
-      {"neg", Type::Neg},           {"halt", Type::Halt},
-      {"jump", Type::Jump},         {"jumpz", Type::Jumpz},
-      {"getbasic", Type::Getbasic}, {"mkbasic", Type::Mkbasic},
-      {"pushloc", Type::Pushloc},   {"pushglob", Type::Pushglob},
+      {"debug", Type::Debug},
+      {"print", Type::Print},
+      {"loadc", Type::Loadc},
+      {"dup", Type::Dup},
+      {"add", Type::Add},
+      {"sub", Type::Sub},
+      {"mul", Type::Mul},
+      {"div", Type::Div},
+      {"mod", Type::Mod},
+      {"and", Type::And},
+      {"or", Type::Or},
+      {"xor", Type::Xor},
+      {"eq", Type::Eq},
+      {"neq", Type::Neq},
+      {"le", Type::Le},
+      {"leq", Type::Leq},
+      {"gr", Type::Gr},
+      {"geq", Type::Geq},
+      {"not", Type::Not},
+      {"neg", Type::Neg},
+      {"halt", Type::Halt},
+      {"jump", Type::Jump},
+      {"jumpz", Type::Jumpz},
+      {"getbasic", Type::Getbasic},
+      {"mkbasic", Type::Mkbasic},
+      {"pushloc", Type::Pushloc},
+      {"pushglob", Type::Pushglob},
       {"slide", Type::Slide}};
   std::string canonical = {};
   std::ranges::transform(name, std::back_inserter(canonical),
@@ -97,8 +111,9 @@ auto hasMandatoryArg(Instr::Type t) -> bool {
 void print(std::span<Byte> code) {
   std::println(stderr, "Instructions ({} bytes):", code.size());
   for (std::size_t i = 0; i < code.size();) {
-    auto instr = code[i++].instruction;
-    std::print(stderr, "   {} ", toString(instr));
+    auto instr = code[i].instruction;
+    std::print(stderr, "   {:5}:  {} ", i, toString(instr));
+    i += 1;
     if (hasMandatoryArg(instr)) {
       std::int64_t value = 0;
       dbg_assert(i + sizeof(value) < code.size(),
@@ -138,6 +153,7 @@ static_assert(sizeof(RegisterBank) <= 8 * sizeof(void *),
 auto doDebug(RegisterBank r) -> int;
 auto doPrint(RegisterBank r) -> int;
 auto doLoadc(RegisterBank r) -> int;
+auto doDup(RegisterBank r) -> int;
 auto doAdd(RegisterBank r) -> int;
 auto doSub(RegisterBank r) -> int;
 auto doMul(RegisterBank r) -> int;
@@ -167,21 +183,21 @@ auto doPushglob(RegisterBank r) -> int;
 auto doSlide(RegisterBank r) -> int;
 
 using InstrFn = int(RegisterBank);
-std::array dispatchTable = checkedArray<InstrFn *, 27>(
-    {{Instr::Debug, doDebug},       {Instr::Print, doPrint},
-     {Instr::Loadc, doLoadc},       {Instr::Add, doAdd},
-     {Instr::Sub, doSub},           {Instr::Mul, doMul},
-     {Instr::Div, doDiv},           {Instr::Mod, doMod},
-     {Instr::And, doAnd},           {Instr::Or, doOr},
-     {Instr::Xor, doXor},           {Instr::Eq, doEq},
-     {Instr::Neq, doNeq},           {Instr::Le, doLe},
-     {Instr::Leq, doLeq},           {Instr::Gr, doGr},
-     {Instr::Geq, doGeq},           {Instr::Not, doNot},
-     {Instr::Neg, doNeg},           {Instr::Halt, doHalt},
-     {Instr::Jump, doJump},         {Instr::Jumpz, doJumpz},
-     {Instr::Getbasic, doGetbasic}, {Instr::Mkbasic, doMkbasic},
-     {Instr::Pushglob, doPushglob}, {Instr::Pushloc, doPushloc},
-     {Instr::Slide, doSlide}});
+std::array dispatchTable = checkedArray<InstrFn *, 28>(
+    {{Instr::Debug, doDebug},     {Instr::Print, doPrint},
+     {Instr::Loadc, doLoadc},     {Instr::Dup, doDup},
+     {Instr::Add, doAdd},         {Instr::Sub, doSub},
+     {Instr::Mul, doMul},         {Instr::Div, doDiv},
+     {Instr::Mod, doMod},         {Instr::And, doAnd},
+     {Instr::Or, doOr},           {Instr::Xor, doXor},
+     {Instr::Eq, doEq},           {Instr::Neq, doNeq},
+     {Instr::Le, doLe},           {Instr::Leq, doLeq},
+     {Instr::Gr, doGr},           {Instr::Geq, doGeq},
+     {Instr::Not, doNot},         {Instr::Neg, doNeg},
+     {Instr::Halt, doHalt},       {Instr::Jump, doJump},
+     {Instr::Jumpz, doJumpz},     {Instr::Getbasic, doGetbasic},
+     {Instr::Mkbasic, doMkbasic}, {Instr::Pushglob, doPushglob},
+     {Instr::Pushloc, doPushloc}, {Instr::Slide, doSlide}});
 
 #define DISPATCH_NEXT                                                          \
   {                                                                            \
@@ -215,6 +231,14 @@ auto doPrint(RegisterBank r) -> int {
 
 auto doLoadc(RegisterBank r) -> int {
   auto x = loadImmediate<MaMa::BasicValue>(r.codePointer);
+  r.stackPointer += 1;
+  *r.stackPointer = x;
+
+  DISPATCH_NEXT
+}
+
+auto doDup(RegisterBank r) -> int {
+  auto x = *r.stackPointer;
   r.stackPointer += 1;
   *r.stackPointer = x;
 
@@ -330,6 +354,7 @@ auto doJumpz(RegisterBank r) -> int {
   auto x = r.stackPointer->value;
   r.stackPointer -= 1;
   if (x == 0) {
+    std::println(stderr, "jump, because 0 == {}", x);
     r.codePointer = r.virtualMachine.getCodeStart() + pc;
   }
   DISPATCH_NEXT
