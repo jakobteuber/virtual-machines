@@ -22,7 +22,11 @@ enum_text = """
     Geq,
     Not,
     Neg,
-   Halt
+   Halt,
+
+   Jump, Jumpz, Getbasic, Mkbasic,
+   PushLoc, PushGlob,
+   Slide
 """
 
 separator = ","

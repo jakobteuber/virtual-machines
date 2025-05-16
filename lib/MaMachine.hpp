@@ -34,7 +34,17 @@ enum Type : std::uint8_t {
   Geq,
   Not,
   Neg,
-  Halt
+  Halt,
+
+  Jump,
+  Jumpz,
+  Getbasic,
+  Mkbasic,
+
+  Pushloc,
+  Pushglob,
+
+  Slide
 };
 
 union Byte {
@@ -51,7 +61,11 @@ void print(std::span<Byte> code);
 
 class MaMa {
 public:
-  using BasicValue = std::int64_t;
+  union BasicValue {
+    std::int64_t value;
+    std::size_t size;
+    void *pointer;
+  };
 
   struct Closure {
     std::size_t codePointer;
@@ -72,8 +86,8 @@ private:
 
   static constexpr std::size_t initialStackSize = 1 << 10;
   std::vector<BasicValue> stack = std::vector<BasicValue>(initialStackSize);
-
-  std::forward_list<HeapValue> heap;
+  std::vector<BasicValue> gloabls = {};
+  std::forward_list<HeapValue> heap = {};
 
   FILE *out;
 
@@ -90,11 +104,14 @@ public:
   auto run() -> int;
 
   auto getOutFile() -> FILE * { return out; }
+  auto getCodeStart() -> Instr::Byte * { return instructions.data(); }
 
   /**
    * @brief Prints the current state of the virtual machine for debugging.
    */
   void debug();
+
+  auto createNew(HeapValue &&v) -> HeapValue *;
 
   /**
    * @brief Loads instructions from a textual representation into a CMa
