@@ -1,0 +1,5 @@
+loadc 10
+loadc 10
+add
+print 
+halt
