@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <initializer_list>
 #include <iterator>
 #include <print>
 #include <span>
@@ -20,6 +21,34 @@
 #include <vector>
 
 namespace vm::mama {
+
+namespace {
+
+template <typename T, std::size_t N>
+constexpr auto
+checkedArray(std::initializer_list<std::pair<std::size_t, T>> init)
+    -> std::array<T, N> {
+  dbg_assert_eq(N, init.size(), "wrong number of elements", N, init.size());
+
+  std::array<bool, N> isSet = {};
+  std::array<T, N> arr = {};
+
+  std::ranges::fill(isSet, false);
+
+  for (auto [index, value] : init) {
+    dbg_assert(!isSet.at(index), "double index", index);
+    isSet[index] = true;
+    arr[index] = value;
+  }
+
+  for (std::size_t i = 0; i < N; ++i) {
+    dbg_assert(isSet.at(i), "unset element");
+  }
+
+  return arr;
+}
+
+} // namespace
 
 namespace Instr {
 
@@ -116,6 +145,7 @@ auto doDiv(RegisterBank r) -> int;
 auto doMod(RegisterBank r) -> int;
 auto doAnd(RegisterBank r) -> int;
 auto doOr(RegisterBank r) -> int;
+auto doXor(RegisterBank r) -> int;
 auto doEq(RegisterBank r) -> int;
 auto doNeq(RegisterBank r) -> int;
 
@@ -137,22 +167,34 @@ auto doPushglob(RegisterBank r) -> int;
 auto doSlide(RegisterBank r) -> int;
 
 using InstrFn = int(RegisterBank);
-std::array dispatchTable = {
-    doDebug,    doPrint,   doLoadc,   doAdd,      doSub,  doMul,  doDiv,
-    doMod,      doAnd,     doOr,      doEq,       doNeq,  doLe,   doLeq,
-    doGr,       doGeq,     doNot,     doNeg,      doHalt, doJump, doJumpz,
-    doGetbasic, doMkbasic, doPushloc, doPushglob, doSlide};
+std::array dispatchTable = checkedArray<InstrFn *, 27>(
+    {{Instr::Debug, doDebug},       {Instr::Print, doPrint},
+     {Instr::Loadc, doLoadc},       {Instr::Add, doAdd},
+     {Instr::Sub, doSub},           {Instr::Mul, doMul},
+     {Instr::Div, doDiv},           {Instr::Mod, doMod},
+     {Instr::And, doAnd},           {Instr::Or, doOr},
+     {Instr::Xor, doXor},           {Instr::Eq, doEq},
+     {Instr::Neq, doNeq},           {Instr::Le, doLe},
+     {Instr::Leq, doLeq},           {Instr::Gr, doGr},
+     {Instr::Geq, doGeq},           {Instr::Not, doNot},
+     {Instr::Neg, doNeg},           {Instr::Halt, doHalt},
+     {Instr::Jump, doJump},         {Instr::Jumpz, doJumpz},
+     {Instr::Getbasic, doGetbasic}, {Instr::Mkbasic, doMkbasic},
+     {Instr::Pushglob, doPushglob}, {Instr::Pushloc, doPushloc},
+     {Instr::Slide, doSlide}});
 
 #define DISPATCH_NEXT                                                          \
   {                                                                            \
+    auto next = dispatchTable[r.codePointer->instruction];                     \
     r.codePointer += 1;                                                        \
-    [[clang::musttail]] return dispatchTable[r.codePointer->instruction](r);   \
+    [[clang::musttail]] return next(r);                                        \
   }
 
 template <typename T>
 [[gnu::always_inline]] auto loadImmediate(Instr::Byte *&codePointer) -> T {
   T immediate;
   std::memcpy(&immediate, codePointer, sizeof(T));
+
   codePointer += sizeof(T);
   return immediate;
 }
@@ -184,7 +226,8 @@ auto doLoadc(RegisterBank r) -> int {
     std::int64_t b = r.stackPointer->value;                                    \
     r.stackPointer -= 1;                                                       \
     std::int64_t a = r.stackPointer->value;                                    \
-    r.stackPointer->value -= (expr);                                           \
+    std::int64_t result = (expr);                                              \
+    r.stackPointer->value = result;                                            \
   }
 
 auto doAdd(RegisterBank r) -> int {
@@ -222,6 +265,11 @@ auto doOr(RegisterBank r) -> int {
   DISPATCH_NEXT
 }
 
+auto doXor(RegisterBank r) -> int {
+  BIN_OP((a != 0) != (b != 0))
+  DISPATCH_NEXT
+}
+
 auto doEq(RegisterBank r) -> int {
   BIN_OP(a == b)
   DISPATCH_NEXT
@@ -252,6 +300,8 @@ auto doGeq(RegisterBank r) -> int {
   DISPATCH_NEXT
 }
 
+#undef BIN_OP
+
 auto doNot(RegisterBank r) -> int {
   auto x = r.stackPointer->value;
   r.stackPointer->value = !x;
@@ -265,8 +315,8 @@ auto doNeg(RegisterBank r) -> int {
 }
 
 auto doHalt(RegisterBank r) -> int {
-  auto x = r.stackPointer->value;
-  return static_cast<int>(x);
+  auto exitCode = static_cast<int>(r.stackPointer->value);
+  return exitCode;
 }
 
 auto doJump(RegisterBank r) -> int {
@@ -335,7 +385,9 @@ auto doSlide(RegisterBank r) -> int {
   DISPATCH_NEXT
 }
 
-#undef BIN_OP
+auto startDispatching(RegisterBank r) -> int { DISPATCH_NEXT }
+
+#undef DISPATCH_NEXT
 
 } // namespace
 
@@ -348,10 +400,8 @@ auto MaMa::run() -> int {
       .virtualMachine = *this,
   };
 
-  return dispatchTable[r.codePointer->instruction](r);
+  return startDispatching(r);
 }
-
-#undef DISPATCH_NEXT
 
 namespace {
 
