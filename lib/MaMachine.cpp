@@ -8,6 +8,7 @@
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <iterator>
 #include <print>
@@ -64,7 +65,23 @@ auto hasMandatoryArg(Instr::Type t) -> bool {
          t == Pushglob || t == Slide;
 }
 
-void print(std::span<Byte>) {}
+void print(std::span<Byte> code) {
+  std::println(stderr, "Instructions ({} bytes):", code.size());
+  for (std::size_t i = 0; i < code.size();) {
+    auto instr = code[i++].instruction;
+    std::print(stderr, "   {} ", toString(instr));
+    if (hasMandatoryArg(instr)) {
+      std::int64_t value = 0;
+      dbg_assert(i + sizeof(value) < code.size(),
+                 "not enough space for immediate in code store", i,
+                 code.size());
+      std::memcpy(&value, &code[i], sizeof(value));
+      i += sizeof(value);
+      std::print(stderr, "{} ", value);
+    }
+    std::println(stderr);
+  }
+}
 
 } // namespace Instr
 
@@ -362,7 +379,9 @@ public:
 } // namespace
 
 auto MaMa::loadInstructions(std::string_view text) -> std::vector<Instr::Byte> {
-  return MaMaParser(text).parse();
+  std::vector code = MaMaParser(text).parse();
+  Instr::print(code);
+  return code;
 }
 
 } // namespace vm::mama

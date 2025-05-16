@@ -41,6 +41,10 @@ add_executable(cma "${CMAKE_SOURCE_DIR}/tools/CMa.cpp")
 target_link_libraries(cma lib)
 target_compile_options(cma PRIVATE "-Werror")
 
+add_executable(mama "${CMAKE_SOURCE_DIR}/tools/MaMa.cpp")
+target_link_libraries(mama lib)
+target_compile_options(mama PRIVATE "-Werror")
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
