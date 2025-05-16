@@ -8,6 +8,7 @@
 #include <charconv>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <string_view>
 #include <unordered_map>
@@ -30,7 +31,7 @@ private:
   std::unordered_map<std::string_view, std::size_t> jumpLabels = {};
   std::vector<std::pair<std::size_t, std::string_view>> backpatching = {};
 
-  auto atEnd() -> bool { return position < text.size(); }
+  auto atEnd() -> bool { return position >= text.size(); }
   auto peek() -> char { return !atEnd() ? text[position] : '\0'; }
   auto advance() -> char {
     char c = peek();
@@ -167,7 +168,10 @@ private:
                      "label unknown while backpatching", label);
       std::size_t value = entry->second;
       std::array bytes = toBytes(value);
-      // wirite bytes, check bounds
+      dbg_assert(position + bytes.size() < code.size(),
+                 "Cannot patch label to this position", position, bytes.size(),
+                 code.size());
+      std::memcpy(code.data() + position, bytes.data(), bytes.size());
     }
   }
 
@@ -203,7 +207,8 @@ public:
     for (skip(); !atEnd(); skip()) {
       consumeWord();
     }
-
+    dbg_assert(atEnd(), "Could not parse full text", position, text.size(),
+               text.substr(position)) patchLabels();
     return std::move(code);
   }
 };
