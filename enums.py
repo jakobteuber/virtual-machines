@@ -3,7 +3,8 @@
 namespace = "Instr"
 enum_name = "Type"
 enum_text = """
-Debug,
+    Debug, 
+    Print,
     Loadc,
     Add,
     Sub,
@@ -21,26 +22,7 @@ Debug,
     Geq,
     Not,
     Neg,
-    Load,
-    Store,
-    Loada,
-    Storea,
-    Pop,
-    Jump,
-    Jumpz,
-    Jumpi,
-    Dup,
-    Alloc,
-    New,
-    Mark,
-    Call,
-    Slide,
-    Enter,
-    Return,
-    Loadrc,
-    Loadr,
-    Storer,
-    Halt
+   Halt
 """
 
 separator = ","
