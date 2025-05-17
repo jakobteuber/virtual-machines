@@ -4,7 +4,6 @@
         loadc _main
         call
         slide 0
-        debug
         halt
 
 _fac:   enter 5
@@ -30,7 +29,7 @@ _fac:   enter 5
     B:  return
 
 _main:  enter 4
-        loadc 20
+        loadc 5
         mark
         loadc _fac
         call
