@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <array>
-#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -17,163 +16,41 @@
 
 namespace vm::parser {
 
-template <typename InstrType, typename InstrByte> class Parser {
-public:
-  virtual auto fromString(std::string_view name) -> InstrType = 0;
-  virtual auto hasArgument(InstrType t) -> bool = 0;
-  virtual auto makeData(std::byte) -> InstrByte = 0;
-  virtual auto makeInstr(InstrType) -> InstrByte = 0;
-
-private:
+class WordParser {
   std::string_view text;
   std::size_t position = 0;
-  std::vector<InstrByte> code = {};
-  std::unordered_map<std::string_view, std::size_t> jumpLabels = {};
-  std::vector<std::pair<std::size_t, std::string_view>> backpatching = {};
 
-  auto atEnd() -> bool { return position >= text.size(); }
-  auto peek() -> char { return !atEnd() ? text[position] : '\0'; }
-  auto advance() -> char {
-    char c = peek();
-    position++;
-    return c;
-  }
+public:
+  explicit WordParser(std::string_view text) : text{text} {}
 
-  void consume(char c) {
-    if (peek() != c) {
-      dbg_fail("Expected different char", peek());
-    }
-    advance();
-  }
+  auto getPosition() -> std::size_t { return position; }
+  auto getText() -> std::string_view { return text; }
 
-  void skipComments() {
-    consume('/');
-    consume('/');
-    while (peek() != '\n' && !atEnd()) {
-      advance();
-    }
-    consume('\n');
-  }
+  auto atEnd() -> bool;
+  auto peek() -> char;
+  auto advance() -> char;
+  void consume(char c);
+  void skipComments();
+  auto isBlank(char c) -> bool;
+  auto isNumeric(char c) -> bool;
+  auto isIdentStart(char c) -> bool;
+  auto isIdentPart(char c) -> bool;
+  void skipWhiteSpace();
+  void skip();
+  auto consumeColon() -> bool;
+  auto readWord() -> std::string_view;
+  auto readNumber() -> std::int32_t;
+};
 
-  auto isBlank(char c) -> bool {
-    return c == ' ' || c == '\t' || c == '\n' || c == '\r';
-  }
+template <typename InstrType> class BasicParser : public WordParser {
+  virtual auto fromString(std::string_view) -> InstrType = 0;
+  virtual auto hasArgument(InstrType) -> bool = 0;
 
-  auto isNumeric(char c) -> bool { return ('0' <= c && c <= '9') || c == '-'; }
-
-  auto isIdentStart(char c) -> bool {
-    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
-  }
-
-  auto isIdentPart(char c) -> bool { return isIdentStart(c) || isNumeric(c); }
-
-  void skipWhiteSpace() {
-    while (isBlank(peek()) && !atEnd()) {
-      advance();
-    }
-  }
-
-  void skip() {
-    while (!atEnd()) {
-      if (peek() == '/') {
-        skipComments();
-      } else if (isBlank(peek())) {
-        skipWhiteSpace();
-      } else {
-        break;
-      }
-    }
-  }
-
-  auto consumeColon() -> bool {
-    skip();
-    bool hasColon = peek() == ':';
-    if (hasColon) {
-      consume(':');
-    }
-    skip();
-    return hasColon;
-  }
-
-  auto readWord() -> std::string_view {
-    skip();
-    std::size_t start = position;
-    while (isIdentPart(peek()) && !atEnd()) {
-      advance();
-    }
-    auto w = text.substr(start, position - start);
-    skip();
-    return w;
-  }
-
-  auto readNumber() -> std::int32_t {
-    skip();
-    std::size_t start = position;
-    if (peek() == '-' || peek() == '+') {
-      advance();
-    }
-    while (isNumeric(peek()) && !atEnd()) {
-      advance();
-    }
-    auto literal = text.substr(start, position - start);
-    skip();
-
-    std::int32_t value;
-    auto result = std::from_chars(literal.begin(), literal.end(), value);
-    dbg_assert_eq(result.ptr, literal.end(), "Could not parse full number",
-                  literal);
-    return value;
-  }
-
-  void registerLabel(std::string_view name) {
-    jumpLabels.insert({name, code.size()});
-  }
-
-  void handleInstruction(InstrType t) { code.push_back(makeInstr(t)); }
-
-  template <typename T>
-  static auto toBytes(T value) -> std::array<std::byte, sizeof(value)> {
-    std::array<std::byte, sizeof(value)> arr = {};
-    std::memcpy(arr.data(), &value, sizeof(value));
-    return arr;
-  }
-
-  template <typename T> void pushImmediate(T value) {
-    for (std::byte b : toBytes(value)) {
-      code.push_back(makeData(b));
-    }
-  }
-
-  void handleInstruction(InstrType t, std::int64_t immediate) {
-    code.push_back(makeInstr(t));
-    pushImmediate(immediate);
-  }
-
-  void handleInstruction(InstrType t, std::string_view label) {
-    code.push_back(makeInstr(t));
-    auto entry = jumpLabels.find(label);
-    if (entry == jumpLabels.end()) {
-      backpatching.emplace_back(code.size(), label);
-      pushImmediate(static_cast<std::size_t>(0));
-    } else {
-      std::size_t address = entry->second;
-      pushImmediate(address);
-    }
-  }
-
-  void patchLabels() {
-    for (auto [position, label] : backpatching) {
-      auto entry = jumpLabels.find(label);
-      dbg_assert_neq(entry, jumpLabels.end(),
-                     "label unknown while backpatching", label);
-      std::size_t value = entry->second;
-      std::array bytes = toBytes(value);
-      dbg_assert(position + bytes.size() < code.size(),
-                 "Cannot patch label to this position", position, bytes.size(),
-                 code.size());
-      std::memcpy(code.data() + position, bytes.data(), bytes.size());
-    }
-  }
+  virtual void registerLabel(std::string_view) = 0;
+  virtual void handleInstruction(InstrType) = 0;
+  virtual void handleInstruction(InstrType, std::string_view) = 0;
+  virtual void handleInstruction(InstrType, std::int64_t) = 0;
+  virtual void patchLabels() = 0;
 
   void parseInstruction(std::string_view word) {
     InstrType instructionType = fromString(word);
@@ -201,14 +78,85 @@ private:
   }
 
 public:
-  explicit Parser(std::string_view text) : text{text} {}
+  explicit BasicParser(std::string_view text) : WordParser(text) {}
 
-  auto parse() -> std::vector<InstrByte> {
+  void runParse() {
     for (skip(); !atEnd(); skip()) {
       consumeWord();
     }
-    dbg_assert(atEnd(), "Could not parse full text", position, text.size(),
-               text.substr(position)) patchLabels();
+    dbg_assert(atEnd(), "Could not parse full text", getPosition(),
+               getText().size(), getText().substr(getPosition(), 100));
+    patchLabels();
+  }
+};
+
+template <typename InstrType, typename InstrByte>
+class RunLengthParser : public BasicParser<InstrType> {
+public:
+  virtual auto makeData(std::byte) -> InstrByte = 0;
+  virtual auto makeInstr(InstrType) -> InstrByte = 0;
+
+private:
+  std::vector<InstrByte> code = {};
+  std::unordered_map<std::string_view, std::size_t> jumpLabels = {};
+  std::vector<std::pair<std::size_t, std::string_view>> backpatching = {};
+
+  void registerLabel(std::string_view name) override {
+    jumpLabels.insert({name, code.size()});
+  }
+
+  void handleInstruction(InstrType t) override { code.push_back(makeInstr(t)); }
+
+  template <typename T>
+  static auto toBytes(T value) -> std::array<std::byte, sizeof(value)> {
+    std::array<std::byte, sizeof(value)> arr = {};
+    std::memcpy(arr.data(), &value, sizeof(value));
+    return arr;
+  }
+
+  template <typename T> void pushImmediate(T value) {
+    for (std::byte b : toBytes(value)) {
+      code.push_back(makeData(b));
+    }
+  }
+
+  void handleInstruction(InstrType t, std::int64_t immediate) override {
+    code.push_back(makeInstr(t));
+    pushImmediate(immediate);
+  }
+
+  void handleInstruction(InstrType t, std::string_view label) override {
+    code.push_back(makeInstr(t));
+    auto entry = jumpLabels.find(label);
+    if (entry == jumpLabels.end()) {
+      backpatching.emplace_back(code.size(), label);
+      pushImmediate(static_cast<std::size_t>(0));
+    } else {
+      std::size_t address = entry->second;
+      pushImmediate(address);
+    }
+  }
+
+  void patchLabels() override {
+    for (auto [position, label] : backpatching) {
+      auto entry = jumpLabels.find(label);
+      dbg_assert_neq(entry, jumpLabels.end(),
+                     "label unknown while backpatching", label);
+      std::size_t value = entry->second;
+      std::array bytes = toBytes(value);
+      dbg_assert(position + bytes.size() < code.size(),
+                 "Cannot patch label to this position", position, bytes.size(),
+                 code.size());
+      std::memcpy(code.data() + position, bytes.data(), bytes.size());
+    }
+  }
+
+public:
+  explicit RunLengthParser(std::string_view text)
+      : BasicParser<InstrType>(text) {}
+
+  auto parse() -> std::vector<InstrByte> {
+    this->runParse();
     return std::move(code);
   }
 };

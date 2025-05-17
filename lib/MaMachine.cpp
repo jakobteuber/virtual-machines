@@ -17,6 +17,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -430,8 +431,8 @@ auto MaMa::run() -> int {
 
 namespace {
 
-class MaMaParser : public parser::Parser<Instr::Type, Instr::Byte> {
-
+class MaMaParser : public parser::RunLengthParser<Instr::Type, Instr::Byte> {
+public:
   auto fromString(std::string_view name) -> Instr::Type override {
     return Instr::fromString(name);
   }
@@ -448,7 +449,7 @@ class MaMaParser : public parser::Parser<Instr::Type, Instr::Byte> {
 
 public:
   explicit MaMaParser(std::string_view text)
-      : vm::parser::Parser<Instr::Type, Instr::Byte>(text) {}
+      : parser::RunLengthParser<Instr::Type, Instr::Byte>(text) {}
 };
 
 } // namespace
