@@ -6,4 +6,14 @@ Implementations for (roughly) the virtual machines described in
 
 ## The C-Machine
 
+Build (on Linux, requires CMake and Make):
+
+    mkdir build && cd build && cmake .. && make 
+
+And to execute: 
+
     ./cma program.cvm
+
+Or just use:
+
+    ./run.sh program.cvm 
