@@ -35,7 +35,7 @@ auto main(int argc, char const *argv[]) -> int {
       wrongUsage(argv[0]);
     }
     std::string_view filename = argv[1];
-    run(filename);
+    return run(filename);
   } catch (...) {
     return EXIT_FAILURE;
   }
