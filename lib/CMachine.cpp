@@ -265,6 +265,12 @@ void CMa::execute(Instr instruction) {
     programCounter = std::numeric_limits<int>::max();
   } break;
 
+  case Instr::Print: {
+    auto x = memory[stackPointer];
+    stackPointer -= 1;
+    std::println(out, "{}", x);
+  } break;
+
   default:
     dbg_fail("Bad instruction", instruction.type, instruction.arg);
   }
@@ -303,7 +309,7 @@ auto Instr::toString(Instr ::Type enumValue) -> std::string_view {
       "or",    "xor",    "eq",     "neq",   "le",     "leq",    "gr",   "geq",
       "not",   "neg",    "load",   "store", "loada",  "storea", "pop",  "jump",
       "jumpz", "jumpi",  "dup",    "alloc", "new",    "mark",   "call", "slide",
-      "enter", "return", "loadrc", "loadr", "storer", "halt"};
+      "enter", "return", "loadrc", "loadr", "storer", "halt",   "print"};
   auto index = static_cast<std::size_t>(enumValue);
   dbg_assert(0 <= index && index < names.size(), "Bad enum tag for Instr::Type",
              enumValue);
@@ -330,7 +336,8 @@ auto Instr ::fromString(std::string_view name) -> Instr::Type {
       {"call", Type::Call},     {"slide", Type::Slide},
       {"enter", Type::Enter},   {"return", Type::Return},
       {"loadrc", Type::Loadrc}, {"loadr", Type::Loadr},
-      {"storer", Type::Storer}, {"halt", Type::Halt}};
+      {"storer", Type::Storer}, {"halt", Type::Halt},
+      {"print", Type::Print}};
   std::string canonical = {};
   std::ranges::transform(name, std::back_inserter(canonical),
                          [](unsigned char c) { return std::tolower(c); });

@@ -60,7 +60,8 @@ struct Instr {
     Loadr,
     Storer,
     // Whole Programs
-    Halt
+    Halt,
+    Print
   };
 
   /**
@@ -111,12 +112,12 @@ private:
   static constexpr int memorySize = 1 << 20;
 
   std::vector<int> memory = std::vector<int>(memorySize);
-  int stackPointer = 0;
-  int framePointer = 0;
-  int extremePointer = 0;
+  int stackPointer = -1;
+  int framePointer = -1;
+  int extremePointer = -1;
   int newPointer = memorySize - 1;
 
-  FILE* out;
+  FILE *out;
 
 private:
   /**
@@ -125,12 +126,10 @@ private:
   void debug();
 
 public:
-  explicit CMa(std::span<Instr> instructions) :
-      instructions {instructions},
-      out {stdout} {}
-  CMa(std::span<Instr> instructions, FILE* out) :
-      instructions {instructions},
-      out {out} {}
+  explicit CMa(std::span<Instr> instructions)
+      : instructions{instructions}, out{stdout} {}
+  CMa(std::span<Instr> instructions, FILE *out)
+      : instructions{instructions}, out{out} {}
 
   /**
    * @brief Executes a single instruction and advances the program counter.
