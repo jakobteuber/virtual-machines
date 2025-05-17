@@ -4,6 +4,9 @@
 #include "lib/Error.hpp"
 #include "lib/MaMachine.hpp"
 
+#include <cstdio>
+#include <string>
+
 namespace {
 
 auto run(std::string_view text) -> std::string {
