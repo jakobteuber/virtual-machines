@@ -355,7 +355,6 @@ auto doJumpz(RegisterBank r) -> int {
   auto x = r.stackPointer->value;
   r.stackPointer -= 1;
   if (x == 0) {
-    std::println(stderr, "jump, because 0 == {}", x);
     r.codePointer = r.virtualMachine.getCodeStart() + pc;
   }
   DISPATCH_NEXT
